@@ -3,7 +3,7 @@ from pptx.util import Pt
 from pptx.dml.color import RGBColor
 from pathlib import Path
 from models.protein_model.human_protein import HumanProtein
-from models.protein_model.ortholog import Ortholog
+from models.annotation import Annotation
 from dataclasses import dataclass, field
 from models.image import Img
 
@@ -129,7 +129,7 @@ class Entry:
                 title = shape
         
         if title:
-            title.text = self.human.name + "Human Seq Annotated"
+            title.text = self.human.name + " Human Sequence Annotated"
 
     
     def populate_str_align_slide(self, align_imgs: list, seq_img: Img=None):
@@ -160,8 +160,16 @@ class Entry:
                 table = shape.table
             if 'TextBox' in shape.name and len(textboxes) < 4:
                 textboxes.append(shape)
+            if 'Title' in shape.name:
+                title = shape
         
-        zipped = zip(placeholders[1:], pictures)
+        if title:
+            if Annotation.ECD in self.human.annotations:
+                title.text = 'ECD Alignment'
+            else:
+                title.text = 'Mature Alignment'
+        
+        zipped = zip(placeholders[1:], pictures[:3])
         for z in zipped:
             z[0].insert_picture(z[1])
 

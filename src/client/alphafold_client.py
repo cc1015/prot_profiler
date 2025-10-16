@@ -1,8 +1,7 @@
-import requests, sys, urllib3
+import requests, urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-from client.base_client import BaseClient
 
-class AlphaFoldClient(BaseClient):
+class AlphaFoldClient:
     """
     Represents AlphaFold client.
 
@@ -11,7 +10,7 @@ class AlphaFoldClient(BaseClient):
     """
     BASE_URL = "https://alphafold.ebi.ac.uk"
 
-    def fetch(self, protein_id: str, **kwargs) -> dict:
+    def get_af_pdb(self, protein_id: str, **kwargs) -> dict:
         """
         Gets AlphaFold PDB file of given protein.
 
@@ -28,7 +27,15 @@ class AlphaFoldClient(BaseClient):
         if not r.ok:
             return {}
 
-        response_dict = r.json()[0]
+        pdb_list = r.json()
+        
+        for pdb in pdb_list:
+            if pdb['uniprotAccession'] == protein_id:
+                response_dict = pdb
+        
+        if response_dict is None:
+            response_dict = pdb_list[0]
+                
         pdb_url = response_dict['pdbUrl']
 
         pdb_file_name = pdb_url.rsplit("/",1)[-1]

@@ -9,3 +9,5 @@ class Organism(Enum):
     ALPACA = ('Vicugna pacos', 30538)
     CYNO = ('Macaca fascicularis', 9541)
     CHICKEN = ('Gallus gallus', 9031)
+    RABBIT = ('Oryctolagus cuniculus', 9986)
+    LLAMA = ('Lama glama', 9844)

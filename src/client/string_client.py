@@ -1,10 +1,9 @@
 import requests, sys, urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-from client.base_client import BaseClient
 from time import sleep
 from pathlib import Path
 
-class StringClient(BaseClient):
+class StringClient():
     """
     Represents STRING client.
 

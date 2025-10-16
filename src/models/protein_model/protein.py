@@ -86,7 +86,7 @@ class Protein(ABC):
         """
         pse_path = self.file_name.parent / "alignments.pse"
         target_path = self.pred_pdb
-        target = self.organism.name
+        target = self.organism.name + "_" + self.id
         (target_start, target_end) = (1, self.passport_table_data['length'])
             
         if (self.annotations.get(Annotation.ECD) or self.annotations.get(Annotation.CHAIN)):
@@ -96,6 +96,8 @@ class Protein(ABC):
                 target_end = max(target_end, int(end))
 
         cmd.load(target_path, target)
+        
+        print(self.organism.name + ": " + str(target_start) + " to " + str(target_end))
 
         cmd.select(f"{target}_sele", f"{target} and resi {target_start}-{target_end}")
         cmd.create(f"{target}_chain", f"{target}_sele")
@@ -106,16 +108,24 @@ class Protein(ABC):
 
         for mobile_protein in mobile_proteins:
             mobile_path = mobile_protein.pred_pdb
-            mobile = mobile_protein.organism.name
+            mobile = mobile_protein.organism.name + "_" + mobile_protein.id
             cmd.load(mobile_path, mobile)
             
             (mobile_start, mobile_end) = (target_start, target_end)
             
-            if (mobile_protein.annotations.get(Annotation.ECD) or mobile_protein.annotations.get(Annotation.CHAIN)):
-                (mobile_start, mobile_end) = (float('-inf'), 0)
-                for (start, end) in (mobile_protein.annotations.get(Annotation.ECD) or mobile_protein.annotations.get(Annotation.CHAIN)):
-                    mobile_start = min(mobile_start, int(start))
-                    mobile_end = max(mobile_end, int(end))
+            '''
+            if (mobile_protein.annotations.get(Annotation.CHAIN)):
+                (mobile_start, mobile_end) = mobile_protein.annotations.get(Annotation.CHAIN)[0]
+                if mobile_end == self.passport_table_data['length']:
+                    mobile_end = target_end
+            '''
+            
+            if (mobile_protein.annotations.get(Annotation.ECD)):
+                (mobile_start, mobile_end) = mobile_protein.annotations.get(Annotation.ECD)[0]
+                if mobile_end == self.passport_table_data['length']:
+                    mobile_end = target_end
+            
+            print(mobile_protein.organism.name + ": " + str(mobile_start) + " to " + str(mobile_end))
 
             cmd.select(f"{mobile}_sele", f"{mobile} and resi {mobile_start}-{mobile_end}")
             cmd.create(f"{mobile}_chain", f"{mobile}_sele")
@@ -125,8 +135,9 @@ class Protein(ABC):
             result = cmd.align(f"polymer and name CA and {mobile}_chain", f"polymer and name CA and {target}_chain")
             mobile_protein.set_rmsd(round(result[0], 2))
 
-            png_path = mobile_protein.file_name / f"{mobile}_human_aligned_ss.png"
-
+            png_path = self.file_name.parent / "structure_alignment_images" / f"{mobile}_human_aligned_ss.png"
+            png_path.parent.mkdir(parents=True, exist_ok=True)
+            
             cmd.disable("all")
             cmd.enable(mobile)
             cmd.enable(target)
@@ -157,6 +168,10 @@ class Protein(ABC):
         Args:
             annotations (str): Annotations.
         '''
+        if not annotations:
+            self.annotations = {}
+            return
+        
         gff_text = annotations.splitlines()
 
         annotations_dict = defaultdict(list)
@@ -178,10 +193,12 @@ class Protein(ABC):
                     annotations_dict[annotation].append((parts[3], parts[4]))
                     renamed.append("\t".join(parts))
                     break
-        
         gff_path = self.file_name / f"{self.id}_annotations.gff"
         gff_path.write_text("\n".join(renamed))
         self.annotations_path = str(gff_path)
+        if Annotation.ECD in annotations_dict:
+            annotations_dict.pop(Annotation.SIGNAL, None)
+            annotations_dict.pop(Annotation.CHAIN, None)
         self.annotations = annotations_dict
 
     def _set_save_af_pdb(self, pdb_name, pdb_content):

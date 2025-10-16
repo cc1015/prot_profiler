@@ -4,11 +4,12 @@ class Annotation(Enum):
     """
     Represents an annotation type.
     """
-    ECD = ("TOPO_DOM", "green", "Extracellular")
-    CHAIN = ("CHAIN", "cyan")
-    TM = ("TRANSMEM", "red")
-    SIGNAL = ("SIGNAL", "yellow")
-    CYTO = ("TOPO_DOM", "magenta", "Cytoplasmic")
+    ECD = ("Topological domain", "green", "Extracellular")
+    CHAIN = ("Chain", "cyan")
+    TM = ("Transmembrane", "red")
+    SIGNAL = ("Signal", "yellow")
+    CYTO = ("Topological domain", "magenta", "Cytoplasmic")
+    GLYCOSYLATION = ("Glycosylation", "orange")
 
     def __init__(self, feature, color, attr=None):
         self.feature = feature
