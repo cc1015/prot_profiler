@@ -136,9 +136,5 @@ class Driver:
     def set_ortholog_selection_callback(self, callback):
         """
         Set a callback function for ortholog selection when multiple options are found.
-        
-        Args:
-            callback: Function that takes (organism_name, options_list) and returns selected accession.
-                     options_list contains dicts with 'accession', 'source', and 'entry' keys.
         """
         self._ortholog_selection_callback = callback
