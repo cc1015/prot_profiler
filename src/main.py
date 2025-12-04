@@ -13,7 +13,7 @@ if 'cancel_process' not in st.session_state:
 def cancel():
     st.session_state.cancel_process = True
 
-def _run_stepwise(protein_id, protein_name, full_name):
+def _run_stepwise(protein_id, protein_name, full_name, selected_organisms):
     """
     Run protein passport in steps so we can cancel mid-process.
     """
@@ -22,7 +22,7 @@ def _run_stepwise(protein_id, protein_name, full_name):
     orthologs = None
 
     st.info(f"Retrieving information for {protein_name}...")
-    proteins = driver.drive(protein_name=protein_name, protein_id=protein_id)
+    proteins = driver.drive(protein_name=protein_name, protein_id=protein_id, selected_organisms=selected_organisms)
     if st.session_state.cancel_process:
         st.warning("Process cancelled during retrieval!")
         return
@@ -79,6 +79,36 @@ def main():
     st.markdown("## Input Options")
     input_option = st.radio("Choose input method:", ["Single Entry", "CSV Upload"])
 
+    st.markdown("## Organism Selection")
+    st.markdown("Select which organisms to use as orthologs (all selected by default):")
+    
+    # Get all organisms except HUMAN
+    available_organisms = [org for org in Organism if org != Organism.HUMAN]
+    
+    # Initialize selected organisms in session state if not present
+    if 'selected_organisms' not in st.session_state:
+        st.session_state.selected_organisms = available_organisms
+    
+    # Create checkboxes for each organism
+    selected_organisms = []
+    col1, col2 = st.columns(2)
+    
+    for i, organism in enumerate(available_organisms):
+        col = col1 if i % 2 == 0 else col2
+        with col:
+            # Use organism.value[0] for display name (e.g., "Homo sapiens")
+            organism_display_name = organism.value[0]
+            is_selected = st.checkbox(
+                organism_display_name,
+                value=organism in st.session_state.selected_organisms,
+                key=f"organism_{organism.name}"
+            )
+            if is_selected:
+                selected_organisms.append(organism)
+    
+    # Update session state
+    st.session_state.selected_organisms = selected_organisms
+
     proteins = []
 
     if input_option == "CSV Upload":
@@ -99,7 +129,7 @@ def main():
     if st.button("Create"):
         st.session_state.cancel_process = False  
         for protein_name, protein_id in proteins:
-            _run_stepwise(protein_id, protein_name, full_name)
+            _run_stepwise(protein_id, protein_name, full_name, selected_organisms)
 
 if __name__ == "__main__":
     main()

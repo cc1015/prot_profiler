@@ -26,31 +26,53 @@ class Driver:
         human_data =  self.uniprot_client.get_entry(protein_id)
         self.protein_information[Organism.HUMAN] = human_data
     
-    def drive(self, protein_name, protein_id):
+    def drive(self, protein_name, protein_id, selected_organisms=None):
         gene_id = next(entry["id"] for entry in self.protein_information[Organism.HUMAN]['uniProtKBCrossReferences'] 
                if entry["database"] == "GeneID")
         excluded = Organism.HUMAN
-        organism_list = [o.tax_id for o in Organism if o != excluded]
+        
+        # Use selected organisms if provided, otherwise use all organisms except HUMAN
+        if selected_organisms is None:
+            organisms_to_process = [o for o in Organism if o != excluded]
+        else:
+            organisms_to_process = selected_organisms
+        
+        organism_list = [o.tax_id for o in organisms_to_process]
         
         ncbi_ids = self.ncbi_ortholog_finder.get_orthologs(gene_id, organism_list)
         
-        for organism, (label, id) in ncbi_ids.items():
-            o = next((o for o in Organism if str(o.tax_id) == organism), None)
-            if 'uniprot' in label:
-                self.protein_information[o] = self.uniprot_client.get_entry(id)
-            elif 'ncbi' in label:
-                self.protein_information[o] = self.ncbi_client.get_entry(id)
+        for organism_tax_id, (label, id) in ncbi_ids.items():
+            o = next((o for o in Organism if str(o.tax_id) == organism_tax_id), None)
+            # Only process if this organism is in the selected list (or if no selection was made)
+            if o and (selected_organisms is None or o in selected_organisms):
+                if 'uniprot' in label:
+                    self.protein_information[o] = self.uniprot_client.get_entry(id)
+                elif 'ncbi' in label:
+                    self.protein_information[o] = self.ncbi_client.get_entry(id)
         
-        for organism, data in self.protein_information.items():
-            if not data:
+        # Only process selected organisms (or all if none specified)
+        organisms_to_check = organisms_to_process if selected_organisms is not None else [o for o in Organism if o != excluded]
+        
+        for organism in organisms_to_check:
+            if organism != Organism.HUMAN and not self.protein_information.get(organism):
                 data = self.uniref_ortholog_finder.get_ortholog_ids(protein_id, organism)
                 self.protein_information[organism] = data
         
-        return self._create_proteins(protein_name, protein_id)
+        return self._create_proteins(protein_name, protein_id, selected_organisms)
             
-    def _create_proteins(self, protein_name, protein_id) -> dict[Organism, Protein]:
+    def _create_proteins(self, protein_name, protein_id, selected_organisms=None) -> dict[Organism, Protein]:
         proteins = {}
-        for organism, results in self.protein_information.items():
+        # Always include HUMAN
+        organisms_to_create = [Organism.HUMAN]
+        
+        # Add selected organisms if provided, otherwise add all non-HUMAN organisms
+        if selected_organisms is not None:
+            organisms_to_create.extend(selected_organisms)
+        else:
+            organisms_to_create.extend([o for o in Organism if o != Organism.HUMAN])
+        
+        for organism in organisms_to_create:
+            results = self.protein_information.get(organism)
             if organism and results:
                 if 'ncbi' in results:
                     fasta = results[1]
