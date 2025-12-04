@@ -1,5 +1,5 @@
 from pptx import Presentation
-from pptx.util import Pt
+from pptx.util import Pt, Inches
 from pptx.dml.color import RGBColor
 from pathlib import Path
 from models.protein_model.human_protein import HumanProtein
@@ -150,13 +150,16 @@ class Entry:
             
         placeholders = []
         textboxes = []
+        table = None
+        title = None
 
+        # Collect all shapes
         for shape in slide.shapes:
             if 'Picture' in shape.name:
                 placeholders.append(shape)
             if 'Table' in shape.name:
                 table = shape.table
-            if 'TextBox' in shape.name and len(textboxes) < 4:
+            if 'TextBox' in shape.name:
                 textboxes.append(shape)
             if 'Title' in shape.name:
                 title = shape
@@ -167,14 +170,74 @@ class Entry:
             else:
                 title.text = 'Mature Alignment'
         
+        # Insert pictures into placeholders (skip first placeholder if it's for something else)
         zipped = zip(placeholders[1:], pictures)
         for z in zipped:
             z[0].insert_picture(z[1])
 
-        zipped = zip(textboxes, captions)
-        for z in zipped:
-            z[0].text = z[1]
-            for paragraph in z[0].text_frame.paragraphs:
+        # Handle textboxes dynamically based on number of captions
+        num_captions = len(captions)
+        num_textboxes = len(textboxes)
+        
+        # If we have more textboxes than captions, delete the excess ones
+        if num_textboxes > num_captions:
+            textboxes_to_delete = textboxes[num_captions:]
+            for textbox in textboxes_to_delete:
+                # Delete the shape by removing its XML element
+                textbox.element.getparent().remove(textbox.element)
+            # Keep only the textboxes we need
+            textboxes = textboxes[:num_captions]
+        
+        # If we have more captions than textboxes, create new ones
+        elif num_captions > num_textboxes:
+            # Calculate spacing and position based on existing textboxes
+            if textboxes:
+                last_textbox = textboxes[-1]
+                # Try to determine spacing from existing textboxes
+                if len(textboxes) > 1:
+                    # Calculate spacing: find the minimum positive difference between consecutive textboxes
+                    # This handles cases where textboxes might be in columns
+                    top_positions = sorted(set([tb.top for tb in textboxes]))
+                    if len(top_positions) > 1:
+                        # Calculate differences between consecutive positions
+                        diffs = [top_positions[i+1] - top_positions[i] for i in range(len(top_positions)-1)]
+                        spacing = min([d for d in diffs if d > 0]) if diffs else last_textbox.height + Pt(10)
+                    else:
+                        # All textboxes at same vertical position (columns), use height + margin
+                        spacing = last_textbox.height + Pt(10)
+                else:
+                    spacing = last_textbox.height + Pt(10)
+                
+                left = last_textbox.left
+                top = last_textbox.top + spacing
+                width = last_textbox.width
+                height = last_textbox.height
+            else:
+                # Default position/size if no textboxes exist
+                left = Inches(0.5)
+                top = Inches(4)
+                width = Inches(9)
+                height = Inches(0.5)
+                spacing = height + Pt(10)
+            
+            # Create new textboxes for remaining captions
+            for i in range(num_textboxes, num_captions):
+                new_top = top + (i - num_textboxes) * spacing
+                new_textbox = slide.shapes.add_textbox(left, new_top, width, height)
+                # Copy formatting from last textbox if available
+                if textboxes:
+                    last_textbox = textboxes[-1]
+                    new_textbox.text_frame.word_wrap = last_textbox.text_frame.word_wrap
+                    new_textbox.text_frame.margin_bottom = last_textbox.text_frame.margin_bottom
+                    new_textbox.text_frame.margin_left = last_textbox.text_frame.margin_left
+                    new_textbox.text_frame.margin_right = last_textbox.text_frame.margin_right
+                    new_textbox.text_frame.margin_top = last_textbox.text_frame.margin_top
+                textboxes.append(new_textbox)
+        
+        # Fill all textboxes with captions
+        for textbox, caption in zip(textboxes, captions):
+            textbox.text = caption
+            for paragraph in textbox.text_frame.paragraphs:
                 for run in paragraph.runs:
                     run.font.size = Pt(14)
 

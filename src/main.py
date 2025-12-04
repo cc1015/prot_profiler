@@ -179,8 +179,10 @@ def _run_stepwise(protein_id, protein_name, full_name, selected_organisms, custo
     rmsd_map = human.structure_align(orthologs)
     slide_3_imgs = []
     for ortholog, (img_path, rmsd) in rmsd_map.items():
+        # Use scientific name for display (value[0] for both Organism enum and CustomOrganism)
+        organism_display_name = ortholog.organism.value[0]
         slide_3_imgs.append(
-            Img(img_path, caption=f"Human:{ortholog.organism.name}\nRMSD: {rmsd}Å")
+            Img(img_path, caption=f"Human:{organism_display_name}\nRMSD: {rmsd}Å")
         )
     if st.session_state.cancel_process:
         st.warning("Process cancelled during structure alignment!")
