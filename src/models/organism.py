@@ -11,3 +11,7 @@ class Organism(Enum):
     CHICKEN = ('Gallus gallus', 9031)
     RABBIT = ('Oryctolagus cuniculus', 9986)
     LLAMA = ('Lama glama', 9844)
+    
+    @property
+    def tax_id(self):
+        return self.value[1]

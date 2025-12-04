@@ -132,7 +132,7 @@ class Entry:
             title.text = self.human.name + " Human Sequence Annotated"
 
     
-    def populate_str_align_slide(self, align_imgs: list, seq_img: Img=None):
+    def populate_str_align_slide(self, align_imgs: list):
         """
         Populates the third slide of protein passport ppt template.
 
@@ -141,8 +141,6 @@ class Entry:
             seq_img (Img): Aligned sequence image.
         """
         slide = self.slides[2]
-
-        #seq_img.horizontal()
         
         pictures = []
         captions = []
@@ -169,7 +167,7 @@ class Entry:
             else:
                 title.text = 'Mature Alignment'
         
-        zipped = zip(placeholders[1:], pictures[:3])
+        zipped = zip(placeholders[1:], pictures)
         for z in zipped:
             z[0].insert_picture(z[1])
 
@@ -211,7 +209,6 @@ class Entry:
         slide = self.slides[3]
         
         slide.shapes.add_picture(network_img, left=1, top=1)
-        # placeholders[1].insert_picture(pred_partners_img)
 
         self.powerpoint.save(self.output_path)
     

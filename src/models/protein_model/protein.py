@@ -96,8 +96,6 @@ class Protein(ABC):
                 target_end = max(target_end, int(end))
 
         cmd.load(target_path, target)
-        
-        print(self.organism.name + ": " + str(target_start) + " to " + str(target_end))
 
         cmd.select(f"{target}_sele", f"{target} and resi {target_start}-{target_end}")
         cmd.create(f"{target}_chain", f"{target}_sele")
@@ -107,6 +105,8 @@ class Protein(ABC):
         rmsd_dict = {}
 
         for mobile_protein in mobile_proteins:
+            if mobile_protein.from_ncbi:
+                continue
             mobile_path = mobile_protein.pred_pdb
             mobile = mobile_protein.organism.name + "_" + mobile_protein.id
             cmd.load(mobile_path, mobile)
@@ -124,8 +124,6 @@ class Protein(ABC):
                 (mobile_start, mobile_end) = mobile_protein.annotations.get(Annotation.ECD)[0]
                 if mobile_end == self.passport_table_data['length']:
                     mobile_end = target_end
-            
-            print(mobile_protein.organism.name + ": " + str(mobile_start) + " to " + str(mobile_end))
 
             cmd.select(f"{mobile}_sele", f"{mobile} and resi {mobile_start}-{mobile_end}")
             cmd.create(f"{mobile}_chain", f"{mobile}_sele")
@@ -202,6 +200,9 @@ class Protein(ABC):
         self.annotations = annotations_dict
 
     def _set_save_af_pdb(self, pdb_name, pdb_content):
+        if not pdb_name:
+            self.from_ncbi = True
+            return
         '''
         Saves PDB content to PDB file and sets pred_pdb_id and pred_pdb field.
 
@@ -213,5 +214,6 @@ class Protein(ABC):
         pdb_path.write_bytes(pdb_content)
         self.pred_pdb_id = pdb_name[:-4]
         self.pred_pdb = str(pdb_path)
+        self.from_ncbi = False
 
     

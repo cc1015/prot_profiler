@@ -63,6 +63,20 @@ class Ortholog(Protein):
                    annotations=annotations_text,
                    string_id=string_id,
                    fasta=fasta)
+        
+    @classmethod
+    def from_ncbi_result(cls, protein_name, protein_id, organism, fasta):
+        id=protein_id
+        name=protein_name
+        return cls(id=id, 
+                   organism=organism, 
+                   name=name, 
+                   pred_pdb=None,
+                   pred_pdb_content=None,
+                   seq=fasta.split('\n', 1)[1].strip(),
+                   annotations=None,
+                   string_id=None,
+                   fasta=fasta)
     
     def set_similarity(self, similarity: float):
         '''

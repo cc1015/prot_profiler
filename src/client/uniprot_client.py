@@ -1,4 +1,4 @@
-import requests, sys, urllib3
+import requests, urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 class UniProtClient():
@@ -10,7 +10,7 @@ class UniProtClient():
     """
     BASE_URL = "https://rest.uniprot.org"
 
-    def get_entry(self, protein_id) -> dict:
+    def get_entry(self, protein_id, **kwargs) -> dict:
         """
         Gets UniProt information.
 
@@ -32,7 +32,8 @@ class UniProtClient():
                 "cc_function",
                 "cc_tissue_specificity",
                 "xref_string",
-                "gene_names"
+                "gene_names",
+                "xref_geneid"
                 ]
             }
         
@@ -40,9 +41,25 @@ class UniProtClient():
             "accept": "application/json"
             }
         
-        path = protein_id
+        if kwargs.get('search'):
+            params["query"] = f"protein_name:{protein_id} AND gene:{kwargs.get('gene')} AND taxonomy_id:{kwargs.get('organism')}"
+            path = "search"
+        else:
+            path = protein_id
         
         url = '/'.join([self.BASE_URL, "uniprotkb", path])
+        
+        if kwargs.get('ref'):
+            params = {
+                "id": f"UniRef50_{protein_id}",
+                "facetFilter": "member_id_type:uniprotkb_id",
+                "size": "500"
+                }
+            headers = {
+                "accept": "application/json"
+                }
+
+            url = '/'.join([self.BASE_URL, "uniref/%7Bid%7D/members"])
         
         r = requests.get(url, headers=headers, params=params, verify=False)
         

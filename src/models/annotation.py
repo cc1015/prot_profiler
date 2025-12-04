@@ -5,9 +5,9 @@ class Annotation(Enum):
     Represents an annotation type.
     """
     ECD = ("Topological domain", "green", "Extracellular")
-    CHAIN = ("Chain", "cyan")
+    CHAIN = ("Chain", "green")
     TM = ("Transmembrane", "red")
-    SIGNAL = ("Signal", "yellow")
+    SIGNAL = ("Signal", "magenta")
     CYTO = ("Topological domain", "magenta", "Cytoplasmic")
     GLYCOSYLATION = ("Glycosylation", "orange")
 
