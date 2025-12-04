@@ -6,12 +6,12 @@ from client.therasabdab_client import TherasabdabClient
 from models.protein_model.human_protein import HumanProtein
 from models.protein_model.ortholog import Ortholog
 from models.protein_model.protein import Protein
-from models.organism import Organism
+from models.organism import Organism, CustomOrganism
 from ortholog_finders.ncbi_ortholog_finder import NCBIOrthologFinder
 from ortholog_finders.uniref_ortholog_finder import UniRefOrthologFinder
 
 class Driver:
-    def __init__(self, protein_id):
+    def __init__(self, protein_id, custom_organisms=None):
         self.uniprot_client = UniProtClient()
         self.af_client = AlphaFoldClient()
         self.string_client = StringClient()
@@ -19,10 +19,15 @@ class Driver:
         self.therasabdab_client = TherasabdabClient()
         self.ncbi_ortholog_finder = NCBIOrthologFinder()
         self.uniref_ortholog_finder = UniRefOrthologFinder()
-        self._set_protein_information(protein_id)
+        self._set_protein_information(protein_id, custom_organisms)
     
-    def _set_protein_information(self, protein_id):
+    def _set_protein_information(self, protein_id, custom_organisms=None):
+        # Initialize with all predefined organisms
         self.protein_information = {o: None for o in Organism}
+        # Add custom organisms if provided
+        if custom_organisms:
+            for custom_org in custom_organisms:
+                self.protein_information[custom_org] = None
         human_data =  self.uniprot_client.get_entry(protein_id)
         self.protein_information[Organism.HUMAN] = human_data
     
@@ -41,8 +46,13 @@ class Driver:
         
         ncbi_ids = self.ncbi_ortholog_finder.get_orthologs(gene_id, organism_list)
         
+        # Create a mapping of tax_id to organism for both predefined and custom organisms
+        tax_id_to_organism = {}
+        for org in organisms_to_process:
+            tax_id_to_organism[str(org.tax_id)] = org
+        
         for organism_tax_id, (label, id) in ncbi_ids.items():
-            o = next((o for o in Organism if str(o.tax_id) == organism_tax_id), None)
+            o = tax_id_to_organism.get(organism_tax_id)
             # Only process if this organism is in the selected list (or if no selection was made)
             if o and (selected_organisms is None or o in selected_organisms):
                 if 'uniprot' in label:
@@ -55,12 +65,16 @@ class Driver:
         
         for organism in organisms_to_check:
             if organism != Organism.HUMAN and not self.protein_information.get(organism):
-                data = self.uniref_ortholog_finder.get_ortholog_ids(protein_id, organism)
-                self.protein_information[organism] = data
+                # Pass selection callback if available
+                selection_callback = getattr(self, '_ortholog_selection_callback', None)
+                data = self.uniref_ortholog_finder.get_ortholog_ids(protein_id, organism, selection_callback=selection_callback)
+                # If data is empty dict, selection is pending - don't set it yet
+                if data:
+                    self.protein_information[organism] = data
         
         return self._create_proteins(protein_name, protein_id, selected_organisms)
             
-    def _create_proteins(self, protein_name, protein_id, selected_organisms=None) -> dict[Organism, Protein]:
+    def _create_proteins(self, protein_name, protein_id, selected_organisms=None):
         proteins = {}
         # Always include HUMAN
         organisms_to_create = [Organism.HUMAN]
@@ -119,10 +133,12 @@ class Driver:
     def _get_therasabdab_info(self, protein_name):
         return self.therasabdab_client.fetch(protein_name)
     
-    def _choose_ortholog_selection(organism_str, uniref_accessions, search):
-        prompt = f"Found multiple {organism_str} orthologs. Please select the desired ortholog from the following:\n"
-        for uniref_accession in uniref_accessions:
-            prompt += f"{uniref_accession}\n"
-        for entry in search:
-            prompt += f"{entry['primaryAccession']}\n"
-        return input(prompt+"Chosen ortholog: ").strip().lower()
+    def set_ortholog_selection_callback(self, callback):
+        """
+        Set a callback function for ortholog selection when multiple options are found.
+        
+        Args:
+            callback: Function that takes (organism_name, options_list) and returns selected accession.
+                     options_list contains dicts with 'accession', 'source', and 'entry' keys.
+        """
+        self._ortholog_selection_callback = callback
