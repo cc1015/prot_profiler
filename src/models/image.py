@@ -1,4 +1,6 @@
 from PIL import Image
+from pathlib import Path
+from utils.file_utils import ensure_directory
 
 class Img():
     """
@@ -34,6 +36,8 @@ class Img():
         """
         Rotates this Image vertically if horizontal.
         """
+        path = Path(self.path)
+        ensure_directory(path.parent)
         with Image.open(self.path) as img:
             if self.width > self.height:
                 img = img.rotate(90, expand=True)
@@ -45,6 +49,8 @@ class Img():
         """
         Rotates this Image horizontally if vertical.
         """
+        path = Path(self.path)
+        ensure_directory(path.parent)
         with Image.open(self.path) as img:
             if self.width < self.height:
                 img = img.rotate(90, expand=True)

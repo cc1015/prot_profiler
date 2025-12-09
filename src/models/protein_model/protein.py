@@ -4,6 +4,7 @@ from abc import ABC
 from models.organism import Organism
 from models.annotation import Annotation
 from pymol import cmd
+from utils.file_utils import ensure_directory, safe_write_text, safe_write_bytes
 
 class Protein(ABC):
     """
@@ -46,7 +47,7 @@ class Protein(ABC):
 
         project_root = Path(__file__).parent.parent.parent.parent
         self.file_name = project_root / f"output_{name}" / f"{self.organism.name.lower()}_{self.name}"
-        self.file_name.mkdir(parents=True, exist_ok=True)
+        ensure_directory(self.file_name)
 
         self._set_save_seq(fasta)
         self._set_save_annotations(annotations)
@@ -134,7 +135,7 @@ class Protein(ABC):
             mobile_protein.set_rmsd(round(result[0], 2))
 
             png_path = self.file_name.parent / "structure_alignment_images" / f"{mobile}_human_aligned_ss.png"
-            png_path.parent.mkdir(parents=True, exist_ok=True)
+            ensure_directory(png_path.parent)
             
             cmd.disable("all")
             cmd.enable(mobile)
@@ -156,7 +157,7 @@ class Protein(ABC):
             seq (str): Sequence.
         '''
         seq_path = self.file_name / f"{self.organism.name}_{self.id}_seq.fasta"
-        seq_path.write_text(seq)
+        safe_write_text(seq_path, seq)
         self.seq = str(seq_path)
 
     def _set_save_annotations(self, annotations):
@@ -192,7 +193,7 @@ class Protein(ABC):
                     renamed.append("\t".join(parts))
                     break
         gff_path = self.file_name / f"{self.id}_annotations.gff"
-        gff_path.write_text("\n".join(renamed))
+        safe_write_text(gff_path, "\n".join(renamed))
         self.annotations_path = str(gff_path)
         if Annotation.ECD in annotations_dict:
             annotations_dict.pop(Annotation.SIGNAL, None)
@@ -211,7 +212,7 @@ class Protein(ABC):
             pdb_content: 3d coordinates of protein.
         '''
         pdb_path = self.file_name / pdb_name
-        pdb_path.write_bytes(pdb_content)
+        safe_write_bytes(pdb_path, pdb_content)
         self.pred_pdb_id = pdb_name[:-4]
         self.pred_pdb = str(pdb_path)
         self.from_ncbi = False

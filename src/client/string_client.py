@@ -2,6 +2,7 @@ import requests, sys, urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 from time import sleep
 from pathlib import Path
+from utils.file_utils import ensure_directory, safe_open_write
 
 class StringClient():
     """
@@ -40,11 +41,12 @@ class StringClient():
             sys.exit()
 
         output_dir = Path(__file__).parent.parent.parent
-        output_dir.mkdir(parents=True, exist_ok=True)
+        ensure_directory(output_dir)
 
         file_name = output_dir / f"output_{protein_name}" / "string_network.png"
+        ensure_directory(file_name.parent)
 
-        with open(file_name, 'wb') as fh:
+        with safe_open_write(file_name, 'wb') as fh:
             fh.write(r.content)
         
         sleep(1)

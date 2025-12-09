@@ -6,6 +6,7 @@ from models.protein_model.human_protein import HumanProtein
 from models.annotation import Annotation
 from dataclasses import dataclass, field
 from models.image import Img
+from utils.file_utils import ensure_directory
 
 @dataclass
 class Entry:
@@ -38,6 +39,8 @@ class Entry:
         self.powerpoint = Presentation(self.template_path)
         self.slides = self.powerpoint.slides
         self.output_path = Path(__file__).parent.parent.parent / f"output_{self.human.name}" / f"{self.human.name}_protein_passport.pptx"
+        # Ensure output directory exists before saving
+        ensure_directory(self.output_path.parent)
         self._build_table_cells()
         self._set_footer()
 
