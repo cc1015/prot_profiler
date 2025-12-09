@@ -166,6 +166,8 @@ class Entry:
                 textboxes.append(shape)
             if 'Title' in shape.name:
                 title = shape
+
+        textboxes = textboxes[1:]
         
         if title:
             if Annotation.ECD in self.human.annotations:
@@ -174,7 +176,7 @@ class Entry:
                 title.text = 'Mature Alignment'
         
         # Insert pictures into placeholders (skip first placeholder if it's for something else)
-        zipped = zip(placeholders[1:], pictures)
+        zipped = zip(placeholders[2:], pictures)
         for z in zipped:
             z[0].insert_picture(z[1])
 
